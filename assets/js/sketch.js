@@ -13,6 +13,32 @@ const last = [
   { x: null, y: null },  // mano 3
 ];
 
+//
+
+const colores = ['red', '#e88802', 'yellow', '#65d72b', 'blue', '#50e8eb', '#f66c9c', '#9605d5'];
+const espaciado = 80;
+
+const paleta = colores.map((color, i) => ({
+  x: 60,
+  y: 60 + i * espaciado,
+  radio: 30,
+  color: color
+}));
+
+const zonaPaleta = {
+  x: 60 - 40,   // un margen alrededor del primer círculo
+  y: 60 - 40,
+  ancho: 120,
+  alto: colores.length * espaciado + 20
+};
+
+function dentroDeZona(x, y, zona) {
+  return x >= zona.x && x <= zona.x + zona.ancho &&
+         y >= zona.y && y <= zona.y + zona.alto;
+}
+
+let colorActual = 'blue'; // color por defecto
+
 // AJUSTAR EL CANVAS AL TAMAÑO REAL DE LA PANTALLA
 function ajustarCanvas() {
   canvas.width  = window.innerWidth;
@@ -27,10 +53,28 @@ document.getElementById('limpiar').addEventListener('click', () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
+//PALETA DE COLORES
+  function dibujarPaleta() {
+    paleta.forEach(c => {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.radio, 0, Math.PI * 2);
+      ctx.fillStyle = c.color;
+      ctx.fill();
+
+      // si es el color seleccionado, le ponemos un borde para destacarlo
+      if (c.color === colorActual) {
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'white';
+        ctx.stroke();
+      }
+    });
+  }
+
 
 /* FUNCIÓN onResults: MediaPipe la llama automáticamente en cada frame del video (aproximadamente 30 veces por segundo), recibe un objeto "results" con toda la información detectada */
 
 function onResults(results) {
+   dibujarPaleta();
 
   // Si MediaPipe no encuentra ninguna mano en el frame
   if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
@@ -71,7 +115,11 @@ function onResults(results) {
     // Solo dibujamos si tenemos una posición anterior guardada para esta mano.
     // En el primer frame después de aparecer la mano, last[i].x es null,
     // así que solo guardamos la posición sin dibujar nada.
-    if (last[i].x !== null) {
+
+    // ── Si el puño NO está cerrado (mano abierta) → dibujar ──────
+    if (!esPunioCerrado(landmarks)&& !dentroDeZona(x, y, zonaPaleta))  {
+    
+      if (last[i].x !== null) {
 
       // Calcular la distancia recorrida desde el frame anterior.
       // Math.hypot calcula la distancia entre dos puntos (Pitágoras).
@@ -88,7 +136,7 @@ function onResults(results) {
       ctx.beginPath();               // empezar un nuevo trazo
       ctx.moveTo(last[i].x, last[i].y); // punto de inicio (frame anterior)
       ctx.lineTo(x, y);              // punto final (frame actual)
-      ctx.strokeStyle = 'blue';      // color del trazo
+      ctx.strokeStyle = colorActual;      // color del trazo
       ctx.lineWidth   = grosor;      // grosor calculado arriba
       ctx.lineCap     = 'round';     // punta redondeada, más orgánica
       ctx.lineJoin    = 'round';     // unión redondeada entre segmentos
@@ -101,11 +149,41 @@ function onResults(results) {
     // En el siguiente frame, esta posición va a ser el last[i] de esta mano
     last[i].x = x;
     last[i].y = y;
+
+  } else {
+    // Puño cerrado: cortar el trazo, no dibujar
+    last[i].x = null;
+    last[i].y = null;
+    estado.textContent = 'Pausado (puño cerrado)';
+  }
+
+  //
+    paleta.forEach(c => {
+      const distancia = Math.hypot(x - c.x, y - c.y);
+      if (distancia < c.radio) {
+        colorActual = c.color;
+      }
+    });
+
   });
+  
 
   estado.textContent = 'Dibujando...';
 }
 
+function esPunioCerrado(landmarks) {
+  const palma = landmarks[0]; // base de la muñeca, referencia de la palma
+
+  const dedos = [8, 12, 16, 20]; // puntas de índice, medio, anular, meñique
+  const bases = [5, 9, 13, 17];  // nudillos de cada dedo
+
+  return dedos.every((punta, idx) => {
+    const distPunta = Math.hypot(landmarks[punta].x - palma.x, landmarks[punta].y - palma.y);
+    const distBase  = Math.hypot(landmarks[bases[idx]].x - palma.x, landmarks[bases[idx]].y - palma.y);
+    // Si la punta está más cerca de la palma que la base, el dedo está doblado
+    return distPunta < distBase;
+  });
+}
 
 // INICIALIZAR MEDIAPIPE HANDS
 // Creamos la instancia principal de MediaPipe Hands.
