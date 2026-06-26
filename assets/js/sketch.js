@@ -1,7 +1,7 @@
 const video  = document.getElementById('video');   
 const canvas = document.getElementById('canvas');  
 const ctx    = canvas.getContext('2d');            
-const cursor = document.getElementById('cursor');  
+const cursor = document.getElementById('cursor');  // ya no se usa solo, ahora creamos un cursor por mano
 const estado = document.getElementById('estado');  
 
 
@@ -13,7 +13,96 @@ const last = [
   { x: null, y: null },  // mano 3
 ];
 
-//
+// COLOR POR MANO: cada mano guarda su propio color elegido, en vez de un solo color global
+const colorPorMano = ['blue', 'red', 'green', 'orange'];
+
+// CURSORES POR MANO: en vez de un solo div #cursor, creamos uno por cada mano posible (hasta 4)
+const cursores = [];
+for (let i = 0; i < 4; i++) {
+  const div = document.createElement('div');
+  div.className = 'cursor-mano';
+  div.style.position = 'fixed';
+  div.style.width = '20px';
+  div.style.height = '20px';
+  div.style.borderRadius = '50%';
+  div.style.border = '3px solid white';
+  div.style.transform = 'translate(-50%, -50%)';
+  div.style.pointerEvents = 'none';
+  div.style.display = 'none';
+  div.style.zIndex = '999';
+  document.body.appendChild(div);
+  cursores.push(div);
+}
+
+// SUAVIZADO: guarda la posición filtrada anterior de cada mano para reducir el jitter (temblor) del modelo
+const suavizado = [
+  { x: null, y: null },
+  { x: null, y: null },
+  { x: null, y: null },
+  { x: null, y: null },
+];
+const FACTOR_SUAVIZADO = 0.5; // 0 = sin suavizado (crudo), 1 = muy suavizado (más lag)
+
+// CONTADOR DE FRAMES PERDIDOS POR MANO: si una mano deja de detectarse
+// por culpa de una oclusión momentánea (ej: se cruza con otra mano),
+// no queremos olvidarla enseguida -> le damos un margen de unos frames
+// antes de borrar su posición y "soltar" su slot.
+const framesPerdidos = [0, 0, 0, 0];
+const MAX_FRAMES_PERDIDOS = 8; // ~250ms a 30fps de tolerancia
+
+// ──────────────────────────────────────────────────────────────
+// EMPAREJAMIENTO DE MANOS ENTRE FRAMES
+// MediaPipe no garantiza que el índice de una mano se mantenga
+// igual entre un frame y el siguiente. Esta función asigna cada
+// mano detectada al "slot" (0-3) cuya posición anterior esté más
+// cerca, para que last/suavizado/color no se mezclen entre manos.
+// ──────────────────────────────────────────────────────────────
+const UMBRAL_MAX_DISTANCIA = 250; // px. Si nada quedó tan cerca, se considera mano nueva
+
+function emparejarManos(deteccionesCrudas) {
+  // deteccionesCrudas: array de {x, y} en píxeles, en el orden que vino este frame
+  const asignacion = new Array(deteccionesCrudas.length).fill(-1);
+
+  // Generamos todos los pares posibles (detección, slot-vivo) con su distancia
+  const candidatos = [];
+  deteccionesCrudas.forEach((det, idxDet) => {
+    for (let slot = 0; slot < 4; slot++) {
+      if (suavizado[slot].x !== null) {
+        const dist = Math.hypot(det.x - suavizado[slot].x, det.y - suavizado[slot].y);
+        candidatos.push({ idxDet, slot, dist });
+      }
+    }
+  });
+
+  // Ordenamos por distancia ascendente: primero emparejamos lo más obvio
+  candidatos.sort((a, b) => a.dist - b.dist);
+
+  const slotsUsados = new Set();
+  const deteccionesUsadas = new Set();
+
+  candidatos.forEach(c => {
+    if (slotsUsados.has(c.slot) || deteccionesUsadas.has(c.idxDet)) return;
+    if (c.dist > UMBRAL_MAX_DISTANCIA) return; // muy lejos, no es la misma mano
+    asignacion[c.idxDet] = c.slot;
+    slotsUsados.add(c.slot);
+    deteccionesUsadas.add(c.idxDet);
+  });
+
+  // Las detecciones sin pareja (manos nuevas, o que reaparecieron lejos) reciben el primer slot libre
+  deteccionesCrudas.forEach((det, idxDet) => {
+    if (asignacion[idxDet] === -1) {
+      for (let slot = 0; slot < 4; slot++) {
+        if (!slotsUsados.has(slot)) {
+          asignacion[idxDet] = slot;
+          slotsUsados.add(slot);
+          break;
+        }
+      }
+    }
+  });
+
+  return { asignacion, slotsUsados };
+}
 
 const colores = ['red', '#e88802', 'yellow', '#65d72b', 'blue', '#50e8eb', '#f66c9c', '#9605d5'];
 const espaciado = 80;
@@ -37,7 +126,12 @@ function dentroDeZona(x, y, zona) {
          y >= zona.y && y <= zona.y + zona.alto;
 }
 
-let colorActual = 'blue'; // color por defecto
+// ──────────────────────────────────────────────────────────────
+// GROSOR DEL BORRADO: este es el número que controla qué tan grande
+// es el círculo que borra cuando hacés el gesto de puño cerrado.
+// Cuanto más grande, más "ancho" borra de un solo pase.
+// ──────────────────────────────────────────────────────────────
+const RADIO_BORRADO = 50;
 
 // AJUSTAR EL CANVAS AL TAMAÑO REAL DE LA PANTALLA
 function ajustarCanvas() {
@@ -54,147 +148,168 @@ document.getElementById('limpiar').addEventListener('click', () => {
 });
 
 //PALETA DE COLORES
-  function dibujarPaleta() {
-    paleta.forEach(c => {
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, c.radio, 0, Math.PI * 2);
-      ctx.fillStyle = c.color;
-      ctx.fill();
-
-      // si es el color seleccionado, le ponemos un borde para destacarlo
-      if (c.color === colorActual) {
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'white';
-        ctx.stroke();
-      }
-    });
-  }
+function dibujarPaleta() {
+  paleta.forEach(c => {
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.radio, 0, Math.PI * 2);
+    ctx.fillStyle = c.color;
+    ctx.fill();
+  });
+}
 
 
 /* FUNCIÓN onResults: MediaPipe la llama automáticamente en cada frame del video (aproximadamente 30 veces por segundo), recibe un objeto "results" con toda la información detectada */
 
 function onResults(results) {
-   dibujarPaleta();
+  dibujarPaleta();
 
-  // Si MediaPipe no encuentra ninguna mano en el frame
   if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-    last.forEach(l => { l.x = null; l.y = null; }); // resetear todas las manos para cortar el trazo activo
-    cursor.style.display = 'none';   // ocultar el cursor visual
-    estado.textContent = 'Mostrá tu mano a la cámara';   // actualizar el mensaje de estado
-    return; 
+    last.forEach(l => { l.x = null; l.y = null; });
+    suavizado.forEach(s => { s.x = null; s.y = null; });
+    cursores.forEach(c => c.style.display = 'none');
+    estado.textContent = 'Mostrá tu mano a la cámara';
+    return;
   }
 
-  // Recorrer todas las manos detectadas 
-  // multiHandLandmarks es un array de manos.
-  // Cada mano es un array de 21 landmarks.
-  // forEach nos da el índice i para saber qué mano es (0, 1, 2, 3)
-  results.multiHandLandmarks.forEach((landmarks, i) => {
-
-    // Landmark 8: punta del dedo índice 
-    // Cada landmark tiene tres valores: x, y, z
-    // x e y van de 0 a 1 (porcentaje del ancho/alto del frame)
-    // z es profundidad relativa 
+  // 1) Calculamos la posición cruda (en píxeles) de cada mano detectada este frame
+  const deteccionesCrudas = results.multiHandLandmarks.map(landmarks => {
     const indice = landmarks[8];
+    return {
+      x: (1 - indice.x) * canvas.width,
+      y: indice.y * canvas.height
+    };
+  });
 
-    // Convertir coordenadas a píxeles del canvas 
-    // MediaPipe devuelve x entre 0 (izquierda) y 1 (derecha).
-    // Como el video está en espejo (transform: scaleX(-1) en CSS),
-    // tenemos que invertir el x: usamos (1 - indice.x).
-    // Luego multiplicamos por el ancho/alto del canvas para obtener píxeles.
-    const x = (1 - indice.x) * canvas.width;
-    const y = indice.y * canvas.height;
+  // 2) Emparejamos cada detección con el slot (mano persistente) correspondiente
+  const { asignacion, slotsUsados } = emparejarManos(deteccionesCrudas);
 
-    // Mover el cursor visual 
-    // Posicionamos el div #cursor en las coordenadas del dedo.
-    // El CSS ya tiene transform: translate(-50%, -50%) para centrarlo.
-    cursor.style.display = 'block';
-    cursor.style.left = x + 'px';
-    cursor.style.top  = y + 'px';
+    // 3) Slots que NO recibieron detección este frame
+  for (let slot = 0; slot < 4; slot++) {
+    if (!slotsUsados.has(slot)) {
+      cursores[slot].style.display = 'none';
+      // Cortamos el trazo apenas se pierde, para no dibujar una línea
+      // larga y fea si la mano reaparece lejos de donde estaba.
+      last[slot].x = null;
+      last[slot].y = null;
 
-    // Dibujar el trazo 
-    // Solo dibujamos si tenemos una posición anterior guardada para esta mano.
-    // En el primer frame después de aparecer la mano, last[i].x es null,
-    // así que solo guardamos la posición sin dibujar nada.
+      framesPerdidos[slot]++;
+      // Solo si pasó MUCHO tiempo sin verla, recién ahí la "olvidamos"
+      // de verdad (se borra su posición y queda libre para otra mano nueva).
+      if (framesPerdidos[slot] > MAX_FRAMES_PERDIDOS) {
+        suavizado[slot].x = null;
+        suavizado[slot].y = null;
+      }
+    } else {
+      framesPerdidos[slot] = 0; // se la volvió a ver, resetea el contador
+    }
+  }
 
-    // ── Si el puño NO está cerrado (mano abierta) → dibujar ──────
-    if (!esPunioCerrado(landmarks)&& !dentroDeZona(x, y, zonaPaleta))  {
-    
-      if (last[i].x !== null) {
+  // 4) Procesamos cada mano detectada usando su SLOT, no su índice crudo de MediaPipe
+  results.multiHandLandmarks.forEach((landmarks, idxDet) => {
+    const slot = asignacion[idxDet];
+    const { x: xCrudo, y: yCrudo } = deteccionesCrudas[idxDet];
 
-      // Calcular la distancia recorrida desde el frame anterior.
-      // Math.hypot calcula la distancia entre dos puntos (Pitágoras).
-      // A mayor distancia = movimiento más rápido.
-      const distancia = Math.hypot(x - last[i].x, y - last[i].y);
-
-      // Grosor dinámico basado en la velocidad del movimiento.
-      // Movimiento lento (distancia chica) → trazo grueso.
-      // Movimiento rápido (distancia grande) → trazo fino.
-      // Math.max(2, ...) asegura que el trazo nunca sea menor a 2px.
-      const grosor = Math.max(2, 26 - distancia * 0.4);
-
-      // Dibujar la línea en el canvas
-      ctx.beginPath();               // empezar un nuevo trazo
-      ctx.moveTo(last[i].x, last[i].y); // punto de inicio (frame anterior)
-      ctx.lineTo(x, y);              // punto final (frame actual)
-      ctx.strokeStyle = colorActual;      // color del trazo
-      ctx.lineWidth   = grosor;      // grosor calculado arriba
-      ctx.lineCap     = 'round';     // punta redondeada, más orgánica
-      ctx.lineJoin    = 'round';     // unión redondeada entre segmentos
-      ctx.globalAlpha = 0.9;         // leve transparencia para suavizar
-      ctx.stroke();                  // ejecutar el dibujo
-      ctx.globalAlpha = 1;           // resetear la transparencia para próximos dibujos
+    // SUAVIZADO
+    if (suavizado[slot].x === null) {
+      suavizado[slot].x = xCrudo;
+      suavizado[slot].y = yCrudo;
+    } else {
+      suavizado[slot].x = suavizado[slot].x * FACTOR_SUAVIZADO + xCrudo * (1 - FACTOR_SUAVIZADO);
+      suavizado[slot].y = suavizado[slot].y * FACTOR_SUAVIZADO + yCrudo * (1 - FACTOR_SUAVIZADO);
     }
 
-    // Guardar posición actual para el próximo frame 
-    // En el siguiente frame, esta posición va a ser el last[i] de esta mano
-    last[i].x = x;
-    last[i].y = y;
+    const x = suavizado[slot].x;
+    const y = suavizado[slot].y;
 
-  } else {
-    // Puño cerrado: cortar el trazo, no dibujar
-    last[i].x = null;
-    last[i].y = null;
-    estado.textContent = 'Pausado (puño cerrado)';
-  }
+    cursores[slot].style.display = 'block';
+    cursores[slot].style.left = x + 'px';
+    cursores[slot].style.top  = y + 'px';
+    cursores[slot].style.borderColor = colorPorMano[slot];
 
-  //
+    const gestoActual = gesto(landmarks);
+    const fueraDeZonaPaleta = !dentroDeZona(x, y, zonaPaleta);
+
+    if (gestoActual === 'dibuja' && fueraDeZonaPaleta) {
+      if (last[slot].x !== null) {
+        ctx.beginPath();
+        ctx.moveTo(last[slot].x, last[slot].y);
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = colorPorMano[slot];
+        ctx.lineWidth   = 6;
+        ctx.lineCap     = 'round';
+        ctx.lineJoin    = 'round';
+        ctx.stroke();
+      }
+      last[slot].x = x;
+      last[slot].y = y;
+
+    } else if (gestoActual === 'borra') {
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(x, y, RADIO_BORRADO, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      last[slot].x = x;
+      last[slot].y = y;
+
+    } else {
+      last[slot].x = null;
+      last[slot].y = null;
+    }
+
     paleta.forEach(c => {
-      const distancia = Math.hypot(x - c.x, y - c.y);
-      if (distancia < c.radio) {
-        colorActual = c.color;
+      const distanciaColor = Math.hypot(x - c.x, y - c.y);
+      if (distanciaColor < c.radio) {
+        colorPorMano[slot] = c.color;
       }
     });
-
   });
-  
 
   estado.textContent = 'Dibujando...';
 }
 
-function esPunioCerrado(landmarks) {
+// Cuenta cuántos de los 4 dedos (índice, medio, anular, meñique) están EXTENDIDOS,
+// comparando qué tan lejos está la punta de la palma respecto a la base del dedo.
+function dedosExtendidos(landmarks) {
   const palma = landmarks[0]; // base de la muñeca, referencia de la palma
 
-  const dedos = [8, 12, 16, 20]; // puntas de índice, medio, anular, meñique
-  const bases = [5, 9, 13, 17];  // nudillos de cada dedo
+  const puntas = [8, 12, 16, 20]; // puntas de índice, medio, anular, meñique
+  const bases  = [5, 9, 13, 17];  // nudillos de cada dedo
 
-  return dedos.every((punta, idx) => {
+  return puntas.map((punta, idx) => {
     const distPunta = Math.hypot(landmarks[punta].x - palma.x, landmarks[punta].y - palma.y);
     const distBase  = Math.hypot(landmarks[bases[idx]].x - palma.x, landmarks[bases[idx]].y - palma.y);
-    // Si la punta está más cerca de la palma que la base, el dedo está doblado
-    return distPunta < distBase;
+    // Si la punta está MÁS LEJOS de la palma que la base, el dedo está extendido
+    return distPunta > distBase;
   });
 }
 
-// INICIALIZAR MEDIAPIPE HANDS
-// Creamos la instancia principal de MediaPipe Hands.
-// locateFile le dice a MediaPipe dónde buscar sus archivos internos
-// (modelos de ML, workers, etc.) — en este caso desde el CDN.
+// Determina el gesto de la mano según cuántos dedos están extendidos:
+// - Solo el índice extendido (los otros 3 doblados)  → 'dibuja'
+// - Los 4 dedos extendidos (mano abierta)             → 'pausa'
+// - Los 4 dedos doblados (puño cerrado)               → 'borra'
+// - Cualquier otra combinación (gesto ambiguo)         → 'pausa' (por seguridad)
+function gesto(landmarks) {
+  const [indice, medio, anular, meñique] = dedosExtendidos(landmarks);
 
+  const soloIndice = indice && !medio && !anular && !meñique;
+  const todosExtendidos = indice && medio && anular && meñique;
+  const todosDoblados = !indice && !medio && !anular && !meñique;
+
+  if (soloIndice) return 'dibuja';
+  if (todosDoblados) return 'borra';
+  if (todosExtendidos) return 'pausa';
+
+  return 'pausa'; // gesto intermedio/ambiguo → no hace nada, por seguridad
+}
+
+// INICIALIZAR MEDIAPIPE HANDS
 const hands = new Hands({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 });
 
-// Configuración del modelo
 hands.setOptions({
   maxNumHands: 4,               // cuántas manos detectar a la vez
   modelComplexity: 1,           // 0 = más rápido pero menos preciso
@@ -205,29 +320,17 @@ hands.setOptions({
                                 // trackeando una mano ya detectada
 });
 
-// Registrar la función que se llama en cada frame
-// Cada vez que MediaPipe procesa un frame llama a onResults
 hands.onResults(onResults);
 
-
 // INICIALIZAR LA CÁMARA CON CAMERA UTILS
-// Camera Utils maneja el loop de frames automáticamente.
-// En cada frame llama a onFrame, que le manda la imagen a MediaPipe.
-// Esto reemplaza al getUserMedia manual: Camera Utils lo hace por dentro.
-
 const camera = new Camera(video, {
   onFrame: async () => {
-    // Le mandamos el frame actual del video a MediaPipe para que lo procese.
-    // MediaPipe analiza la imagen, detecta manos, y llama a onResults.
     await hands.send({ image: video });
   },
   width: 1280,   // resolución del stream de la cámara
   height: 720    // 720p es suficiente para esta etapa
 });
 
-// Arrancar la cámara
-// .then() se ejecuta si arranca correctamente
-// .catch() se ejecuta si hay algún error (por ejemplo, sin permiso de cámara)
 camera.start()
   .then(() => {
     estado.textContent = 'Mostrá tu mano a la cámara';
