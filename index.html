@@ -22,11 +22,17 @@
             <div id="estado">Cargando cámara...</div> <!--MENSAJE DE ESTADO-->
 
             <button id="limpiar">Limpiar</button> <!--BOTON LIMPIAR-->
-            
 
         </div>
 
-        <script src="assets/js/sketch.js"></script>
+        <!-- El orden importa: config primero porque todos los demás lo usan,
+             mediapipe último porque necesita que todo lo anterior ya esté cargado -->
+        <script src="assets/js/config.js"></script>
+        <script src="assets/js/canvas.js"></script>
+        <script src="assets/js/paleta.js"></script>
+        <script src="assets/js/gestos.js"></script>
+        <script src="assets/js/manos.js"></script>
+        <script src="assets/js/mediapipe.js"></script>
 
     </body>
 </html>
