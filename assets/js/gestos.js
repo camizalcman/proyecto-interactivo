@@ -29,13 +29,15 @@ function dedosExtendidos(landmarks) {
 function gesto(landmarks) {
   const [indice, medio, anular, meñique] = dedosExtendidos(landmarks);
 
-  const soloIndice      = indice && !medio && !anular && !meñique;
+  const soloIndice     = indice && !medio && !anular && !meñique;
   const todosExtendidos = indice && medio && anular && meñique;
-  const todosDoblados   = !indice && !medio && !anular && !meñique;
+  // Puño: los 4 dedos doblados. Si se estira CUALQUIER dedo,
+  // no se toma como borrador.
+  const todosDoblados  = !indice && !medio && !anular && !meñique;
 
-  if (soloIndice)    return 'dibuja';
-  if (todosDoblados) return 'borra';
+  if (soloIndice)      return 'dibuja';
+  if (todosDoblados)   return 'borra';
   if (todosExtendidos) return 'pausa';
 
-  return 'pausa'; // gesto intermedio/ambiguo → no hace nada, por seguridad
+  return 'pausa';
 }
