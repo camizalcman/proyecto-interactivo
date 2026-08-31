@@ -244,8 +244,9 @@ function onResults(results) {
     // (afecta a todas las manos al mismo tiempo).
     paleta.forEach(c => {
       const distanciaColor = Math.hypot(x - c.x, y - c.y);
-      if (distanciaColor < c.radio) {
+      if (distanciaColor < c.radio && colorActual !== c.color) {
         colorActual = c.color;
+        mostrarCambioColor(x, y); // círculo relleno + ✓ en la posición de la mano
       }
     });
 

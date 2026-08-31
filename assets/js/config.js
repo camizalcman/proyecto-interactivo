@@ -76,4 +76,8 @@ const CONFIG = {
   // ── Cronómetro ───────────────────────────────────────────────
   // Cantidad de segundos por defecto del cronómetro (editable en pantalla).
   CRONOMETRO_SEGUNDOS: 60,
+
+  // Duración (en ms) del feedback visual al cambiar de color: se muestra
+  // un círculo con el nuevo color y un ✓ durante este tiempo.
+  FEEDBACK_COLOR_MS: 2000,
 };

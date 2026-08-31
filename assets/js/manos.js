@@ -30,9 +30,50 @@ for (let i = 0; i < 4; i++) {
   div.style.transform = 'translate(-50%, -50%)';
   div.style.pointerEvents = 'none';
   div.style.display = 'none';
-  div.style.zIndex = '999';
+  div.style.zIndex = '2147483647';
   document.body.appendChild(div);
   cursores.push(div);
+}
+
+// ─────────────────────────────────────────────────────────────
+// FEEDBACK DE CAMBIO DE COLOR
+// Cuando se toca la paleta y cambia colorActual, se muestra un
+// círculo grande relleno del nuevo color con un ✓ en el centro,
+// en la posición de la mano que cambió el color, durante unos
+// segundos (duración en CONFIG.FEEDBACK_COLOR_MS).
+// Es un elemento dedicado e independiente del cursor de dibujo,
+// con z-index máximo para garantizar que SIEMPRE quede visible
+// por encima de la paleta, el canvas y cualquier otro elemento.
+// ─────────────────────────────────────────────────────────────
+const feedbackColor = document.createElement('div');
+Object.assign(feedbackColor.style, {
+  position:    'fixed',
+  width:       '32px',
+  height:      '32px',
+  borderRadius: '50%',
+  display:     'none',
+  zIndex:      '2147483647',
+  pointerEvents: 'none',
+  transform:   'translate(-50%, -50%)',
+  boxShadow:   '0 0 0 3px rgba(255,255,255,0.95), 0 0 12px rgba(0,0,0,0.6)',
+});
+feedbackColor.innerHTML = '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.5);">&#10003;</span>';
+document.body.appendChild(feedbackColor);
+
+let temporizadorFeedback = null;
+
+function mostrarCambioColor(x, y) {
+  const color = colorActual;
+  const duracion = CONFIG.FEEDBACK_COLOR_MS;
+  feedbackColor.style.display = 'block';
+  feedbackColor.style.background = color;
+  feedbackColor.style.left = x + 'px';
+  feedbackColor.style.top  = y + 'px';
+  clearTimeout(temporizadorFeedback);
+  temporizadorFeedback = setTimeout(() => {
+    feedbackColor.style.display = 'none';
+  }, duracion);
+  console.log('[feedback] color cambiado a', color, 'en', x, y);
 }
 
 // SUAVIZADO: guarda la posición filtrada anterior de cada mano para reducir el jitter (temblor) del modelo
