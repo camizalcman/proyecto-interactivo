@@ -98,6 +98,11 @@ const MAX_FRAMES_PERDIDOS = CONFIG.MAX_FRAMES_PERDIDOS; // ~250ms a 30fps de tol
 const faltasDibuja = [0, 0, 0, 0];
 const MAX_FALTAS_DIBUJA = CONFIG.MAX_FALTAS_DIBUJA;
 
+// CONTADOR DE "FALTAS" DEL BORRADOR por mano: igual que faltasDibuja pero para
+// el gesto de puño. Evita que un parpadeo de un frame resetee la carga del borrador.
+const faltasBorra = [0, 0, 0, 0];
+const MAX_FALTAS_BORRA = CONFIG.MAX_FALTAS_BORRA;
+
 // Distancia máxima (px) entre el último punto y el nuevo para empalmar el trazo
 // cuando la mano se perdió y reapareció (GAP_MAX en config.js).
 const GAP_MAX = CONFIG.GAP_MAX;

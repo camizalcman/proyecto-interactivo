@@ -6,7 +6,9 @@
 // (gesto 'thumbsup').
 // Visualmente: un anillo (círculo) cuyo BORDE se va deshaciendo
 // a medida que baja el número, con el número en el centro. En los
-// últimos 10 segundos tanto el anillo como el número se ponen rojos.
+// últimos 15 segundos tanto el anillo como el número se ponen rojos.
+// Antes de arrancar la cuenta regresiva se muestra un countdown
+// (3, 2, 1, ¡A dibujar!) en pantalla completa.
 // Depende de: config.js (CONFIG)
 // ─────────────────────────────────────────────────────────────
 
@@ -14,7 +16,7 @@ const TIC_MS = 100; // actualizamos el render varias veces por segundo
 
 // ── UI ───────────────────────────────────────────────────────
 const TAMANO = 96;        // diámetro del cronómetro
-const UMBRAL_ROJO = 10;   // últimos N segundos en rojo
+const UMBRAL_ROJO = 15;   // últimos N segundos en rojo
 const GROSOR_ANILLO = 8;  // grosor del borde del anillo
 const R_CENTRO = TAMANO / 2;
 const R_ANILLO = R_CENTRO - GROSOR_ANILLO;
@@ -99,6 +101,55 @@ let segundosTotal = CONFIG.CRONOMETRO_SEGUNDOS;
 let segundosRestantes = CONFIG.CRONOMETRO_SEGUNDOS;
 let corriendo = false;
 let intervaloId = null;
+let countdownActivo = false;
+
+// ── OVERLAY DE COUNTDOWN ─────────────────────────────────────
+// Se muestra en el centro de la pantalla antes de arrancar la
+// cuenta regresiva: 3, 2, 1, ¡A dibujar!
+const overlay = document.createElement('div');
+Object.assign(overlay.style, {
+  position:        'fixed',
+  inset:           '0',
+  display:         'none',
+  alignItems:      'center',
+  justifyContent:  'center',
+  zIndex:          '9999',
+  pointerEvents:   'none',
+  fontFamily:      'sans-serif',
+  fontSize:        '120px',
+  fontWeight:      'bold',
+  color:           '#ffffff',
+  textShadow:      '0 4px 20px rgba(0,0,0,0.6)',
+  background:      'rgba(0,0,0,0.35)',
+  transition:      'opacity 0.25s',
+});
+document.body.appendChild(overlay);
+
+function mostrarCountdown(callback) {
+  countdownActivo = true;
+  overlay.style.display = 'flex';
+  overlay.style.opacity = '1';
+
+  const pasos = ['3', '2', '1', '¡A dibujar!'];
+  let i = 0;
+
+  function mostrarPaso() {
+    if (i >= pasos.length) {
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        countdownActivo = false;
+        callback();
+      }, 250);
+      return;
+    }
+    overlay.textContent = pasos[i];
+    i++;
+    setTimeout(mostrarPaso, 1000);
+  }
+
+  mostrarPaso();
+}
 
 // Cambia programáticamente la duración inicial (sin mostrar editor en pantalla)
 function setCronometroSegundos(segundos) {
@@ -128,25 +179,27 @@ function renderizar() {
 }
 
 function iniciarCronometro() {
-  if (!corriendo) {
-    segundosRestantes = segundosTotal;
-  }
-  corriendo = true;
-  renderizar();
+  if (corriendo || countdownActivo) return;
 
-  clearInterval(intervaloId);
-  intervaloId = setInterval(() => {
-    segundosRestantes -= TIC_MS / 1000;
-    if (segundosRestantes <= 0) {
-      segundosRestantes = 0;
-      corriendo = false;
-      clearInterval(intervaloId);
-      intervaloId = null;
-      renderizar();
-      return;
-    }
+  mostrarCountdown(() => {
+    segundosRestantes = segundosTotal;
+    corriendo = true;
     renderizar();
-  }, TIC_MS);
+
+    clearInterval(intervaloId);
+    intervaloId = setInterval(() => {
+      segundosRestantes -= TIC_MS / 1000;
+      if (segundosRestantes <= 0) {
+        segundosRestantes = 0;
+        corriendo = false;
+        clearInterval(intervaloId);
+        intervaloId = null;
+        renderizar();
+        return;
+      }
+      renderizar();
+    }, TIC_MS);
+  });
 }
 
 // Estado inicial

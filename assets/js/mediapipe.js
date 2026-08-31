@@ -48,6 +48,7 @@ function onResults(results) {
       anillosCarga[slot].svg.style.display = 'none';
       cargaBorrador[slot].start    = null;
       cargaBorrador[slot].progreso = 0;
+      faltasBorra[slot] = 0;
       anillosDibujo[slot].svg.style.display = 'none';
       cargaDibujo[slot].start    = null;
       cargaDibujo[slot].progreso = 0;
@@ -101,13 +102,18 @@ function onResults(results) {
       thumbsupPrev[slot] = false;
     }
 
-    // Si el gesto NO es puño, cancelamos la carga del borrador de inmediato:
-    // se oculta el anillo (para que no quede "frenado" en pantalla) y se
-    // resetea el progreso (así la próxima vez arranca de cero).
+    // Si el gesto NO es de borrar, cancelamos la carga del borrador:
+    // toleramos unos frames de fluctuación (faltasBorra) antes de resetear,
+    // así un parpadeo del reconocimiento no corta la carga.
     if (gestoActual !== 'borra') {
-      anillosCarga[slot].svg.style.display = 'none';
-      cargaBorrador[slot].start    = null;
-      cargaBorrador[slot].progreso = 0;
+      faltasBorra[slot]++;
+      if (faltasBorra[slot] > MAX_FALTAS_BORRA) {
+        anillosCarga[slot].svg.style.display = 'none';
+        cargaBorrador[slot].start    = null;
+        cargaBorrador[slot].progreso = 0;
+      }
+    } else {
+      faltasBorra[slot] = 0; // volvió el borrador, resetea el contador de faltas
     }
 
     // El anillo de carga del DIBUJO solo se muestra mientras se dibuja.
@@ -173,10 +179,10 @@ function onResults(results) {
 
     } else if (gestoActual === 'borra') {
       // ── BORRAR CON CARGA ─────────────────────────────────────
-      // El puño no borra al instante: hay que mantenerlo cerrado hasta que
-      // el anillo se llene (TIEMPO_CARGA_BORRADO_MS). Si se suelta antes,
+      // La mano abierta no borra al instante: hay que mantenerla abierta hasta que
+      // el anillo se llene (TIEMPO_CARGA_BORRADO_MS). Si se cierra antes,
       // se cancela la carga y no se borra nada.
-      cursores[slot].style.display = 'none'; // en puño no se muestra el puntero
+      cursores[slot].style.display = 'none'; // en borrador no se muestra el puntero
       // Al pasar a borrador, el puntero de dibujo vuelve a necesitar cargar
       // la próxima vez que se quiera dibujar.
       cargaDibujo[slot].start    = null;
@@ -188,7 +194,7 @@ function onResults(results) {
       const T = CONFIG.TIEMPO_CARGA_BORRADO_MS;
       cargaBorrador[slot].progreso = Math.min(1, (ahora - cargaBorrador[slot].start) / T);
 
-      // Movemos el anillo de carga con el puño y actualizamos el relleno
+      // Movemos el anillo de carga con la mano y actualizamos el relleno
       const anillo = anillosCarga[slot];
       anillo.svg.style.display = 'block';
       anillo.svg.style.left = (x - CONFIG.RADIO_BORRADO) + 'px';

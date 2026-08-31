@@ -28,7 +28,7 @@ const CONFIG = {
   // es el círculo que borra cuando hacés el gesto de puño cerrado.
   // Cuanto más grande, más "ancho" borra de un solo pase.
   // ──────────────────────────────────────────────────────────────
-  RADIO_BORRADO: 60,
+  RADIO_BORRADO: 50,
 
   // TIEMPO DE CARGA DEL BORRADOR: para borrar hay que mantener el puño cerrado
   // este tiempo (en milisegundos). Mientras carga se ve el anillo rellenándose;
@@ -55,6 +55,11 @@ const CONFIG = {
   // presente pero sin gesto de dibujo antes de cortar la línea. Evita que un
   // parpadeo del reconocimiento de gestos corte el trazo.
   MAX_FALTAS_DIBUJA: 6,
+
+  // Tolerancia a fluctuaciones del gesto de borrado: cuántos frames seguidos puede
+  // el gesto dejar de ser 'borra' sin que se resetee la carga del borrador.
+  // Evita que un parpadeo de MediaPipe pierda la carga del puño.
+  MAX_FALTAS_BORRA: 4,
 
   // Distancia máxima (px) entre el último punto y el nuevo para "empalmar" el
   // trazo cuando la mano se perdió y reapareció. Si reaparece más lejos, se
