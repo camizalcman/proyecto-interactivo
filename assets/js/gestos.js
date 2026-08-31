@@ -23,11 +23,14 @@ function dedosExtendidos(landmarks) {
 
 // Determina el gesto de la mano según cuántos dedos están extendidos:
 // - Solo el índice extendido (los otros 3 doblados)  → 'dibuja'
+// - Pulgar arriba (pulgar extendido, resto doblado)  → 'thumbsup'
 // - Los 4 dedos extendidos (mano abierta)             → 'pausa'
 // - Los 4 dedos doblados (puño cerrado)               → 'borra'
 // - Cualquier otra combinación (gesto ambiguo)         → 'pausa' (por seguridad)
 function gesto(landmarks) {
   const [indice, medio, anular, meñique] = dedosExtendidos(landmarks);
+
+  if (pulgarArriba(landmarks)) return 'thumbsup';
 
   const soloIndice     = indice && !medio && !anular && !meñique;
   const todosExtendidos = indice && medio && anular && meñique;
@@ -40,4 +43,18 @@ function gesto(landmarks) {
   if (todosExtendidos) return 'pausa';
 
   return 'pausa';
+}
+
+// Detecta el gesto de "pulgar arriba": el pulgar extendido (punta más lejos de la
+// palma que su base) mientras los otros 4 dedos están doblados.
+function pulgarArriba(landmarks) {
+  const palma = landmarks[0];
+  const [indice, medio, anular, meñique] = dedosExtendidos(landmarks);
+
+  // Pulgar extendido: la punta (4) más lejos de la palma que el nudillo (2)
+  const distPulgarPunta = Math.hypot(landmarks[4].x - palma.x, landmarks[4].y - palma.y);
+  const distPulgarBase  = Math.hypot(landmarks[2].x - palma.x, landmarks[2].y - palma.y);
+  const pulgarExtendido = distPulgarPunta > distPulgarBase;
+
+  return pulgarExtendido && !indice && !medio && !anular && !meñique;
 }

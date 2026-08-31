@@ -8,6 +8,11 @@
 // ─────────────────────────────────────────────────────────────
 
 /* FUNCIÓN onResults: MediaPipe la llama automáticamente en cada frame del video (aproximadamente 30 veces por segundo), recibe un objeto "results" con toda la información detectada */
+
+// Estado por slot para detectar el "pulgar arriba" como flanco (disparo único),
+// así el cronómetro no se reinicia continuamente mientras se mantiene el gesto.
+const thumbsupPrev = [false, false, false, false];
+
 function onResults(results) {
   dibujarPaleta();
   redibujarPlantillaActiva(); 
@@ -86,6 +91,15 @@ function onResults(results) {
 
     const gestoActual       = gesto(landmarks);
     const fueraDeZonaPaleta = !dentroDeZona(x, y, zonaPaleta);
+
+    // PULGAR ARRIBA → arranca el cronómetro (solo una vez por gesto).
+    // Al soltar el gesto se resetea el flanco para poder volver a arrancarlo.
+    if (gestoActual === 'thumbsup' && !thumbsupPrev[slot]) {
+      thumbsupPrev[slot] = true;
+      iniciarCronometro();
+    } else if (gestoActual !== 'thumbsup') {
+      thumbsupPrev[slot] = false;
+    }
 
     // Si el gesto NO es puño, cancelamos la carga del borrador de inmediato:
     // se oculta el anillo (para que no quede "frenado" en pantalla) y se

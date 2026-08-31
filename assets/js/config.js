@@ -72,4 +72,8 @@ const CONFIG = {
 
   // ── Color inicial ─────────────────────────────────────────────
   COLOR_INICIAL: 'blue',
+
+  // ── Cronómetro ───────────────────────────────────────────────
+  // Cantidad de segundos por defecto del cronómetro (editable en pantalla).
+  CRONOMETRO_SEGUNDOS: 60,
 };
