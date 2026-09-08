@@ -18,6 +18,9 @@ ajustarCanvas();
 window.addEventListener('resize', ajustarCanvas);
 
 // BOTÓN LIMPIAR
-document.getElementById('limpiar').addEventListener('click', () => {
+document.getElementById('limpiar').addEventListener('click', limpiarCanvas);
+
+// Borra todo el dibujo del canvas. También lo usa cronometro.js al celebrar.
+function limpiarCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-});
+}

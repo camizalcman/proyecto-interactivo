@@ -8,6 +8,7 @@
 body {
   background: #000;
   overflow: hidden;
+  font-family: 'Noto Sans', sans-serif;
 }
 
 #contenedor {
@@ -50,7 +51,6 @@ body {
   left: 50%;
   transform: translateX(-50%);
   color: rgba(255, 255, 255, 0.6);
-  font-family: sans-serif;
   font-size: 14px;
   pointer-events: none;
   /* Texto centrado horizontalmente sin importar su ancho */
@@ -59,7 +59,7 @@ body {
 
 #limpiar {
   position: absolute;
-  top: 20px;
+  bottom: 70px;
   right: 20px;
   background: rgba(255, 255, 255, 0.15);
   color: white;
@@ -67,7 +67,6 @@ body {
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
-  font-family: sans-serif;
   font-size: 14px;
   /* z-index alto para que esté por encima del canvas */
   z-index: 10;
@@ -75,4 +74,72 @@ body {
 
 #limpiar:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+#reglas {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  /* z-index alto para que esté por encima del canvas */
+  z-index: 10;
+}
+
+#reglas:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── VIDEO DE REGLAS ─────────────────────────────────────────── */
+#overlayReglas {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+}
+
+#overlayReglas.visible {
+  display: flex;
+}
+
+#marcoReglas {
+  position: relative;
+  width: min(85vw, 900px);
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#videoReglas {
+  display: block;
+  width: 100%;
+  max-height: 85vh;
+}
+
+#cerrarReglas {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 11;
+}
+
+#cerrarReglas:hover {
+  background: rgba(0, 0, 0, 0.85);
 }

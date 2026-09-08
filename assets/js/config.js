@@ -12,7 +12,7 @@ const CONFIG = {
   CAMARA_ALTO: 720,    // 720p es suficiente para esta etapa
 
   // ── MediaPipe ────────────────────────────────────────────────
-  MAX_MANOS: 1, // prueba con una sola mano (para dibujar y para borrar)
+  MAX_MANOS: 1, // una sola mano (detección de ambas desactivada)
   MODEL_COMPLEXITY: 1,           // 0 = más rápido pero menos preciso
                                  // 1 = más preciso pero más lento
   MIN_DETECTION_CONFIDENCE: 0.7, // confianza mínima para considerar
@@ -82,7 +82,35 @@ const CONFIG = {
   // Cantidad de segundos por defecto del cronómetro (editable en pantalla).
   CRONOMETRO_SEGUNDOS: 60,
 
+  // Frames seguidos que hay que mantener el gesto de pulgar arriba para que
+  // arranque el cronómetro. Evita que un falso positivo de MediaPipe (una
+  // "mano" detectada en el fondo por un solo frame) dispare la cuenta regresiva.
+  FRAMES_PULGAR_ARRIBA: 6,
+
+  // Frames seguidos con el gesto de "L" (pulgar arriba + índice estirado,
+  // resto doblado) para frenar el cronómetro y mostrar "¡Felicitaciones!".
+  // Mismo criterio anti-falsos-positivos.
+  FRAMES_FELICITACION: 6,
+
+  // Tolerancia de perpendicularidad del gesto "L": el pulgar y el índice deben
+  // formar ~90° para que sea una "L" de verdad (si el pulgar queda pegado o
+  // doblado, como en el gesto de solo índice, no cuenta). Es el |cos(ángulo)|
+  // máximo aceptado: 0.35 ≈ entre 70° y 110°. Subirlo hace el gesto más fácil
+  // de hacer pero aumenta los falsos positivos con el índice solo.
+  COSENO_MAX_GESTO_L: 0.35,
+
   // Duración (en ms) del feedback visual al cambiar de color: se muestra
   // un círculo con el nuevo color y un ✓ durante este tiempo.
   FEEDBACK_COLOR_MS: 2000,
+
+  // ── Audios ───────────────────────────────────────────────────
+  // Carpeta donde viven los audios. Para agregar un sonido nuevo:
+  // 1) ponelo en la carpeta 2) agregalo acá 3) llamá reproducirAudio('evento').
+  AUDIO_CARPETA: 'assets/audio/',
+  AUDIOS: {
+    countdown: 'countdown.mp3', // suena cuando faltan 10 segundos en el cronómetro
+    gameOver:  'gameOver.mp3',  // suena cuando se termina el tiempo
+    dibujar:   'dibujar.mp3',   // suena cuando aparece "¡A dibujar!"
+    win:       'win.mp3',       // suena cuando aparece "¡Felicitaciones!"
+  },
 };

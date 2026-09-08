@@ -104,7 +104,7 @@ function dibujarMenu() {
     // Label de texto
     ctx.save();
     ctx.fillStyle = 'white';
-    ctx.font      = 'bold 13px sans-serif';
+    ctx.font      = 'bold 13px "Noto Sans", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(item.label, z.x + z.ancho / 2, z.y + z.alto / 2 - 5);
@@ -247,7 +247,7 @@ function dibujarPapa() {
   ];
 
   ctx.save();
-  ctx.font         = 'bold 80px sans-serif';
+  ctx.font         = 'bold 80px "Noto Sans", sans-serif';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle    = 'rgba(255, 255, 255, 0.55)';
@@ -319,7 +319,7 @@ function dibujarLaberinto() {
 
   // Etiquetas de entrada y salida
   ctx.fillStyle    = 'rgba(255, 255, 255, 0.7)';
-  ctx.font         = 'bold 16px sans-serif';
+  ctx.font         = 'bold 16px "Noto Sans", sans-serif';
   ctx.textAlign    = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText('ENTRADA', ox - 5, oy + 3.5 * u);

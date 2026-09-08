@@ -9,9 +9,25 @@
 
 /* FUNCIÓN onResults: MediaPipe la llama automáticamente en cada frame del video (aproximadamente 30 veces por segundo), recibe un objeto "results" con toda la información detectada */
 
-// Estado por slot para detectar el "pulgar arriba" como flanco (disparo único),
-// así el cronómetro no se reinicia continuamente mientras se mantiene el gesto.
-const thumbsupPrev = [false, false, false, false];
+// Estado por slot para detectar el "pulgar arriba" como flanco (disparo único):
+// el cronómetro solo arranca si el gesto se mantiene varios frames seguidos
+// (CONFIG.FRAMES_PULGAR_ARRIBA), así un falso positivo de un solo frame no lo activa
+// y tampoco se reinicia continuamente mientras se mantiene el gesto.
+const thumbsupFrames = [0, 0, 0, 0];
+
+// Frames seguidos con el gesto de "L" (índice estirado + pulgar arriba) antes
+// de frenar el cronómetro (CONFIG.FRAMES_FELICITACION). Mismo criterio
+// anti-falsos-positivos.
+let felicitacionesFrames = 0;
+
+// Disparo único estilo "pulgar arriba": la celebración se dispara una sola vez
+// y no se vuelve a disparar hasta que la mano vuelva a bajar (elemento
+// rearmado). Si no, con la mano sostenida el mensaje nunca se iría.
+let felicitacionDisparada = false;
+
+// Para diagnóstico: sólo logueamos cuando cambia el estado de detección,
+// no en cada frame.
+let ultimoLogFinalizar = null;
 
 function onResults(results) {
   dibujarPaleta();
@@ -23,8 +39,41 @@ function onResults(results) {
     suavizado.forEach(s => { s.x = null; s.y = null; });
     cursores.forEach(c => c.style.display = 'none');
     cursorBorrador.style.display = 'none'; // ← ACÁ
+    felicitacionesFrames = 0;
+    felicitacionDisparada = false;
     estado.textContent = 'Mostrá tu mano a la cámara';
     return;
+  }
+
+  // GESTO DE FINALIZAR: el gesto de "L" (índice estirado + pulgar arriba,
+  // resto doblado) frenan el cronómetro, borran el dibujo y muestran
+  // "¡Felicitaciones!". El contador tolera parpadeos: si un frame no se lee
+  // el gesto, baja de a uno en vez de resetear a cero (mismo criterio que las
+  // "faltas" de dibujar/borrar).
+  const gestoLDetectado = results.multiHandLandmarks.some(gestoL);
+
+  const logFinalizar = `${results.multiHandLandmarks.length}:${gestoLDetectado}`;
+  if (ultimoLogFinalizar !== logFinalizar) {
+    ultimoLogFinalizar = logFinalizar;
+    console.log('[finalizar] manos detectadas:', results.multiHandLandmarks.length,
+      '| gesto L detectado:', gestoLDetectado);
+  }
+
+  if (gestoLDetectado) {
+    // Solo se dispara con el flanco (gesto recién levantado), una sola vez.
+    // Mientras se mantenga el gesto no se vuelve a activar ni reinicia los 5 s.
+    if (!felicitacionDisparada) {
+      felicitacionesFrames = Math.min(felicitacionesFrames + 1, CONFIG.FRAMES_FELICITACION * 2);
+      if (felicitacionesFrames === CONFIG.FRAMES_FELICITACION) {
+        felicitacionDisparada = true;
+        console.log('[finalizar] gesto L detectado: freno el cronómetro');
+        frenarCronometro();
+      }
+    }
+  } else {
+    // Mano bajada (o gesto distinto): se rearma el disparo y el contador.
+    felicitacionesFrames = 0;
+    felicitacionDisparada = false;
   }
 
   // 1) Calculamos la posición cruda (en píxeles) de cada mano detectada este frame
@@ -90,16 +139,21 @@ function onResults(results) {
     cursores[slot].style.top  = y + 'px';
     cursores[slot].style.borderColor = colorActual;
 
-    const gestoActual       = gesto(landmarks);
+    // Si hay un gesto de "L" (finalizar), ningún dedo acciona dibujar/borrar:
+    // es el momento de celebración, no de limpiar el canvas.
+    const gestoActual = gestoLDetectado ? 'pausa' : gesto(landmarks);
     const fueraDeZonaPaleta = !dentroDeZona(x, y, zonaPaleta);
 
-    // PULGAR ARRIBA → arranca el cronómetro (solo una vez por gesto).
-    // Al soltar el gesto se resetea el flanco para poder volver a arrancarlo.
-    if (gestoActual === 'thumbsup' && !thumbsupPrev[slot]) {
-      thumbsupPrev[slot] = true;
-      iniciarCronometro();
-    } else if (gestoActual !== 'thumbsup') {
-      thumbsupPrev[slot] = false;
+    // PULGAR ARRIBA → arranca el cronómetro. Solo arranca si el gesto se
+    // mantiene FRAMES_PULGAR_ARRIBA frames seguidos; al soltarlo el contador
+    // vuelve a cero y queda listo para volver a arrancarlo.
+    if (gestoActual === 'thumbsup') {
+      thumbsupFrames[slot]++;
+      if (thumbsupFrames[slot] === CONFIG.FRAMES_PULGAR_ARRIBA) {
+        iniciarCronometro();
+      }
+    } else {
+      thumbsupFrames[slot] = 0;
     }
 
     // Si el gesto NO es de borrar, cancelamos la carga del borrador:
