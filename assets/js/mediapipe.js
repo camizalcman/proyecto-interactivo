@@ -29,8 +29,50 @@ let felicitacionDisparada = false;
 // no en cada frame.
 let ultimoLogFinalizar = null;
 
+// ─────────────────────────────────────────────────────────────
+// DEBUG DE GESTOS (opcional)
+// Abrí la página con ?debug al final (ej.: index.html?debug) y abajo a la
+// izquierda aparece, en vivo, qué dedos ve extendidos MediaPipe y qué gesto
+// queda detectado:  dedos 1010 pulgar 0 → tresDedos
+// Sirve para ver POR QUÉ un gesto no se dispara, en vez de adivinar.
+// Los mismos datos van a la consola (solo cuando cambian, no cada frame).
+// ─────────────────────────────────────────────────────────────
+const DEBUG_GESTOS = /(^|[?&])debug/.test(location.search);
+let debugUltimaLinea = '';
+let debugGestos = null;
+
+if (DEBUG_GESTOS) {
+  debugGestos = document.createElement('div');
+  Object.assign(debugGestos.style, {
+    position:      'fixed',
+    left:          '10px',
+    bottom:        '10px',
+    padding:       '6px 10px',
+    background:    'rgba(0, 0, 0, 0.75)',
+    color:         '#7CFC00',
+    font:          '12px monospace',
+    whiteSpace:    'pre',
+    pointerEvents: 'none',
+    zIndex:        '2147483647',
+  });
+  document.body.appendChild(debugGestos);
+}
+
+function actualizarDebugGestos(landmarks, gestoActual) {
+  if (!DEBUG_GESTOS) return;
+  const d = dedosExtendidos(landmarks);
+  const linea = `dedos ${d.map(v => v ? 1 : 0).join('')}  pulgar ${pulgarExtendido(landmarks) ? 1 : 0}  ->  ${gestoActual}`;
+  if (linea === debugUltimaLinea) return; // sólo escribo si cambió algo
+  debugUltimaLinea = linea;
+  debugGestos.textContent = linea;
+  console.log('[dedos]', linea);
+}
+
 function onResults(results) {
-  dibujarPaleta();
+  // La capa de interfaz (paleta) se borra entera en cada frame y se vuelve a
+  // dibujar: así no queda "pintada" encima del dibujo de los frames anteriores.
+  limpiarOverlay();
+
   redibujarPlantillaActiva(); 
   dibujarMenu();              
 
@@ -39,9 +81,11 @@ function onResults(results) {
     suavizado.forEach(s => { s.x = null; s.y = null; });
     cursores.forEach(c => c.style.display = 'none');
     cursorBorrador.style.display = 'none'; // ← ACÁ
+    cerrarPaleta(); // sin mano no hay puntero: el anillo tampoco queda colgado
     felicitacionesFrames = 0;
     felicitacionDisparada = false;
     estado.textContent = 'Mostrá tu mano a la cámara';
+    if (DEBUG_GESTOS) debugGestos.textContent = 'sin manos';
     return;
   }
 
@@ -142,7 +186,45 @@ function onResults(results) {
     // Si hay un gesto de "L" (finalizar), ningún dedo acciona dibujar/borrar:
     // es el momento de celebración, no de limpiar el canvas.
     const gestoActual = gestoLDetectado ? 'pausa' : gesto(landmarks);
-    const fueraDeZonaPaleta = !dentroDeZona(x, y, zonaPaleta);
+
+    // Muestra (solo con ?debug) qué dedos se ven extendidos y qué se detectó.
+    actualizarDebugGestos(landmarks, gestoActual);
+
+// ── PALETA DE COLORES ALREDEDOR DEL PUNTERO ────────────────
+    // Con el gesto de 3 dedos (índice + medio + anular) aparece un anillo
+    // de colores clavado en el punto donde se hizo el gesto. Después elige
+    // el mismo puntero: en cuanto pisa un color, lo elige, el anillo
+    // desaparece y el dibujo sigue (sin volver a esperar la carga).
+    actualizarPaleta(gestoActual, x, y);
+
+    if (paletaVisible) {
+      // Con la paleta abierta la mano no dibuja ni borra: solo elige color.
+      cursorBorrador.style.display = 'none';
+      anillosCarga[slot].svg.style.display  = 'none';
+      anillosDibujo[slot].svg.style.display = 'none';
+      cargaBorrador[slot].start    = null; // el borrador no queda a medio cargar
+      cargaBorrador[slot].progreso = 0;
+
+      // El puntero queda blanco y visible: es el cursor de la paleta.
+      cursores[slot].style.borderColor = 'white';
+      cursores[slot].style.opacity = '1';
+
+      // En cuanto el puntero pisa un color: se elige y se cierra la paleta.
+      const elegido = seleccionarColorPaleta(x, y);
+      if (elegido) {
+        cerrarPaleta();
+        if (elegido !== colorActual) {
+          colorActual = elegido;
+          mostrarCambioColor(x, y); // círculo relleno + ✓ en la posición de la mano
+        }
+      }
+
+      // Cortamos el trazo para que al volver a dibujar no aparezca un
+      // garabato largo desde el punto anterior hasta el actual.
+      last[slot].x = null;
+      last[slot].y = null;
+return; // este frame la mano se dedicó a la paleta
+    }
 
     // PULGAR ARRIBA → arranca el cronómetro. Solo arranca si el gesto se
     // mantiene FRAMES_PULGAR_ARRIBA frames seguidos; al soltarlo el contador
@@ -178,7 +260,7 @@ function onResults(results) {
       anillosDibujo[slot].svg.style.display = 'none';
     }
 
-    if (gestoActual === 'dibuja' && fueraDeZonaPaleta) {
+    if (gestoActual === 'dibuja') {
       // Al volver a dibujar nos aseguramos de ocultar el cursor del borrador
       // (si veníamos de borrar), para no confundir los dos modos.
       cursorBorrador.style.display = 'none';
@@ -281,7 +363,7 @@ function onResults(results) {
     } else {
       cursorBorrador.style.display = 'none';
       // (La cancelación del anillo de cargas ya se hizo arriba)
-      anillosDibujo[slot].svg.style.display = 'none'; // p. ej. si el dedo está sobre la paleta
+      anillosDibujo[slot].svg.style.display = 'none'; // p. ej. con gesto de pausa
 
       // Puntero INACTIVO: cuando la mano está extendida (o el gesto no es
       // dibujar/borrar), el puntero se ve blanco y casi transparente.
@@ -300,20 +382,17 @@ function onResults(results) {
       }
     }
 
-    // Si CUALQUIER mano toca un color de la paleta, cambia el color GLOBAL
-    // (afecta a todas las manos al mismo tiempo).
-    paleta.forEach(c => {
-      const distanciaColor = Math.hypot(x - c.x, y - c.y);
-      if (distanciaColor < c.radio && colorActual !== c.color) {
-        colorActual = c.color;
-        mostrarCambioColor(x, y); // círculo relleno + ✓ en la posición de la mano
-      }
-    });
+    // La selección de color la maneja la paleta radial de más arriba
+  // (se abre con el gesto de 3 dedos y se elige con el puntero).
 
-    verificarDwellMenu(x, y); 
+  verificarDwellMenu(x, y); 
   });
 
-  estado.textContent = 'Dibujando...';
+  // La paleta se dibuja sobre la capa de interfaz, que ya quedó limpia arriba:
+  // así queda por encima de los trazos y nunca se acumula.
+  dibujarPaleta();
+
+  estado.textContent = paletaVisible ? 'Elegí un color' : 'Dibujando...';
 }
 
 // INICIALIZAR MEDIAPIPE HANDS

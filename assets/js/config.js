@@ -69,11 +69,29 @@ const CONFIG = {
   UMBRAL_MAX_DISTANCIA: 250, // px. Si nada quedó tan cerca, se considera mano nueva
 
   // ── Paleta de colores ─────────────────────────────────────────
+  // La paleta NO vive fija en un borde de la pantalla: aparece como un
+  // anillo de colores ALREDEDOR DEL PUNTERO cuando se hace el gesto de
+  // 3 dedos (índice + medio + anular). Después se elige con el mismo
+  // puntero y la paleta se cierra, así el dibujo puede seguir.
   COLORES: ['red', '#e88802', 'yellow', '#65d72b', 'blue', '#50e8eb', '#f66c9c', '#9605d5'],
-  PALETA_X: 60,
-  PALETA_Y_INICIO: 60,
-  PALETA_ESPACIADO: 80,
-  PALETA_RADIO: 30,
+  PALETA_RADIO: 30,            // radio de cada círculo de color
+  PALETA_RADIO_ANILLO: 130,    // distancia del puntero (centro) a cada color
+  PALETA_TOLERANCIA: 14,       // margen extra para "agarrar" un color con el puntero
+  PALETA_MARGEN_BORDE: 30,     // margen mínimo del anillo contra los bordes de la pantalla
+
+  // Frames "buenos" con el gesto de 3 dedos antes de que aparezca la paleta.
+  FRAMES_GESTO_PALETA: 4,
+
+  // Tolerancia a parpadeos del gesto de 3 dedos: cuántos frames seguidos puede
+  // fallar la lectura SIN perder la apertura (el contador baja de a uno, no a
+  // cero). Es el mismo truco que MAX_FALTAS_DIBUJA / MAX_FALTAS_BORRA: si el
+  // modelo titila entre frame y frame, sin esto la paleta nunca abriría.
+  MAX_FALTAS_PALETA: 3,
+
+  // La paleta se cierra sola si pasan estos ms sin elegir color (por ejemplo
+  // si la mano se aleja o el gesto no se reconoce bien), para no quedar
+  // tapando la pantalla indefinidamente.
+  PALETA_TIMEOUT_MS: 6000,
 
   // ── Color inicial ─────────────────────────────────────────────
   COLOR_INICIAL: 'blue',
@@ -100,8 +118,10 @@ const CONFIG = {
   COSENO_MAX_GESTO_L: 0.35,
 
   // Duración (en ms) del feedback visual al cambiar de color: se muestra
-  // un círculo con el nuevo color y un ✓ durante este tiempo.
-  FEEDBACK_COLOR_MS: 2000,
+  // un círculo con el nuevo color y un ✓ durante este tiempo. Es corto a
+  // propósito: la paleta ya se cerró y el puntero ya quedó del color nuevo,
+  // así que el ✓ solo confirma el cambio y estorba si dura mucho.
+  FEEDBACK_COLOR_MS: 700,
 
   // ── Audios ───────────────────────────────────────────────────
   // Carpeta donde viven los audios. Para agregar un sonido nuevo:

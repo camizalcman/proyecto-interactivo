@@ -31,7 +31,7 @@ let dwellInicio   = null; // timestamp de cuando empezó el dwell
 // Cada ítem tiene un id, un label visible y una función que
 // dibuja la plantilla correspondiente en el canvas.
 const MENU_X         = 30;  // posición horizontal del menú
-const MENU_Y_INICIO  = 180; // posición vertical del primer ítem (debajo de la paleta)
+const MENU_Y_INICIO  = 180; // posición vertical del primer ítem (en el costado izquierdo)
 const MENU_ANCHO     = 120;
 const MENU_ALTO_ITEM = 70;  // alto de cada tarjeta del menú
 const MENU_GAP       = 12;  // separación entre tarjetas

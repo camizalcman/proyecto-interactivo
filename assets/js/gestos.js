@@ -45,6 +45,17 @@ function dedosExtendidos(landmarks) {
   });
 }
 
+// El meñique casi nunca queda 100% doblado cuando los otros tres dedos están
+// arriba (la mano tiembla, el meñique se queda a medio camino, o el modelo lo
+// lee "extendido"). Por eso acá exigimos que esté CLARAMENTE extendido: si la
+// punta apenas le pasa a la articulación, lo contamos como doblado.
+function meñiqueClaro(landmarks) {
+  const palma = landmarks[0];
+  const punta = dist3D(landmarks[20], palma);
+  const pip   = dist3D(landmarks[19], palma);
+  return punta > pip * 1.15;
+}
+
 // El pulgar está extendido cuando su punta (4) queda más lejos de la muñeca
 // que su articulación IP (3). Mismo criterio que los demás dedos, en 3D.
 function pulgarExtendido(landmarks) {
@@ -53,9 +64,10 @@ function pulgarExtendido(landmarks) {
 }
 
 // Determina el gesto de la mano según los dedos extendidos:
-// - Solo el índice extendido (8-7-6)                  → 'dibuja'
 // - Pulgar arriba (pulgar extendido, resto doblado)   → 'thumbsup'
+// - Solo el índice extendido (8-7-6)                  → 'dibuja'
 // - Índice (8-7-6) + medio (12-11-10) extendidos      → 'pausa' (frena el trazo)
+// - Índice + medio + anular extendidos                → 'tresDedos' (abre la paleta)
 // - Mano abierta (los 5 dedos extendidos)             → 'borra'
 // - Cualquier otra combinación (gesto ambiguo)         → 'pausa' (por seguridad)
 function gesto(landmarks) {
@@ -72,7 +84,15 @@ function gesto(landmarks) {
   // 3) Índice + medio: frenar el trazo.
   if (indiceYMedio)            return 'pausa';
   // 4) Mano abierta: borrador. Piden los 5 dedos estirados, EL PULGAR INCLUIDO.
+  //    Va antes que la paleta para que la mano abierta nunca abra la paleta.
   if (todosExtendidos && pulgarExtendido(landmarks)) return 'borra';
+  // 5) Los tres dedos del medio levantados (índice + medio + anular) abren la
+  //    paleta. Al meñique no le exigimos que esté doblado: si está claramente
+  //    arriba pero el pulgar NO lo está, también lo tomamos como gesto de la
+  //    paleta (así no importa cómo el modelo lea ese dedo, tan dudoso).
+  if (indice && medio && anular && !(meñiqueClaro(landmarks) && pulgarExtendido(landmarks))) {
+    return 'tresDedos';
+  }
 
   return 'pausa';
 }
