@@ -23,6 +23,8 @@ for (let i = 0; i < 4; i++) {
   const div = document.createElement('div');
   div.className = 'cursor-mano';
   div.style.position = 'fixed';
+  // x/y vienen en coordenadas del canvas, que arranca después del panel de gestos
+  div.style.marginLeft = 'var(--ancho-panel)';
   div.style.width = '20px';
   div.style.height = '20px';
   div.style.borderRadius = '50%';
@@ -48,6 +50,7 @@ for (let i = 0; i < 4; i++) {
 const feedbackColor = document.createElement('div');
 Object.assign(feedbackColor.style, {
   position:    'fixed',
+  marginLeft:  'var(--ancho-panel)', // compensa el panel de gestos
   width:       '32px',
   height:      '32px',
   borderRadius: '50%',
@@ -168,6 +171,7 @@ const cursorBorrador = document.createElement('div');
 cursorBorrador.id = 'cursor-borrador';
 Object.assign(cursorBorrador.style, {
   position:        'fixed',
+  marginLeft:      'var(--ancho-panel)', // compensa el panel de gestos
   width:           (CONFIG.RADIO_BORRADO * 2) + 'px',
   height:          (CONFIG.RADIO_BORRADO * 2) + 'px',
   borderRadius:    '50%',
@@ -220,6 +224,7 @@ function crearAnillo(R, grosor) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   Object.assign(svg.style, {
     position:      'fixed',
+    marginLeft:    'var(--ancho-panel)', // compensa el panel de gestos
     pointerEvents: 'none',
     display:       'none',
     zIndex:        '999',

@@ -11,10 +11,64 @@ body {
   font-family: 'Noto Sans', sans-serif;
 }
 
+:root {
+  --ancho-panel: 180px;
+}
+
+/* El área de cámara/dibujo ocupa todo menos el panel lateral */
 #contenedor {
   position: relative;
-  width: 100vw;
+  margin-left: var(--ancho-panel);
+  width: calc(100vw - var(--ancho-panel));
   height: 100vh;
+}
+
+/* ── PANEL LATERAL DE GESTOS ─────────────────────────────────── */
+#panelGestos {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--ancho-panel);
+  height: 100vh;
+  background: #0b1a3a;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 18px; /* espacio entre gesto y gesto */
+  padding: 16px 10px;
+  z-index: 20;
+}
+
+/* Cada gesto (imagen + texto) se reparte el alto del panel en partes iguales */
+#panelGestos figure {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#panelGestos img {
+  display: block;
+  width: 75%;
+  min-height: 0;
+  flex: 1;
+  object-fit: contain;
+}
+
+#panelGestos figcaption {
+  color: #fff;
+  font-family: 'Noto Sans', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
 }
 
 #video {

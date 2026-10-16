@@ -45,7 +45,7 @@ if (DEBUG_GESTOS) {
   debugGestos = document.createElement('div');
   Object.assign(debugGestos.style, {
     position:      'fixed',
-    left:          '10px',
+    left:          'calc(var(--ancho-panel) + 10px)', // a la derecha del panel de gestos
     bottom:        '10px',
     padding:       '6px 10px',
     background:    'rgba(0, 0, 0, 0.75)',

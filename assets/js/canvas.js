@@ -19,11 +19,14 @@ const ctx    = canvas.getContext('2d');
 const canvasOverlay = document.getElementById('overlay');
 const octx          = canvasOverlay.getContext('2d');
 
-// AJUSTAR LOS CANVAS AL TAMAÑO REAL DE LA PANTALLA
+// AJUSTAR LOS CANVAS AL TAMAÑO DEL CONTENEDOR
+// (no a toda la ventana: a la derecha está el panel fijo de gestos)
+const contenedor = document.getElementById('contenedor');
+
 function ajustarCanvas() {
   [canvas, canvasOverlay].forEach(c => {
-    c.width  = window.innerWidth;
-    c.height = window.innerHeight;
+    c.width  = contenedor.clientWidth;
+    c.height = contenedor.clientHeight;
   });
 }
 
