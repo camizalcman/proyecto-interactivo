@@ -61,7 +61,13 @@ if (DEBUG_GESTOS) {
 function actualizarDebugGestos(landmarks, gestoActual) {
   if (!DEBUG_GESTOS) return;
   const d = dedosExtendidos(landmarks);
-  const linea = `dedos ${d.map(v => v ? 1 : 0).join('')}  pulgar ${pulgarExtendido(landmarks) ? 1 : 0}  ->  ${gestoActual}`;
+  // Se muestran los datos que deciden el gesto de pulgar arriba: extender los
+  // dedos, que el pulgar esté estirado y que apunte hacia arriba. Con eso se
+  // ve al tiro por qué NO se arrancó el cronómetro.
+  const linea = `dedos ${d.map(v => v ? 1 : 0).join('')}  `
+    + `pulgar ${pulgarExtendido(landmarks) ? 1 : 0}  `
+    + `arriba ${pulgarApuntaArriba(landmarks) ? 1 : 0}  `
+    + `->  ${gestoActual}`;
   if (linea === debugUltimaLinea) return; // sólo escribo si cambió algo
   debugUltimaLinea = linea;
   debugGestos.textContent = linea;
@@ -84,6 +90,7 @@ function onResults(results) {
     cerrarPaleta(); // sin mano no hay puntero: el anillo tampoco queda colgado
     felicitacionesFrames = 0;
     felicitacionDisparada = false;
+    thumbsupFrames.fill(0); // sin mano, el pulgar arriba vuelve a cero
     estado.textContent = 'Mostrá tu mano a la cámara';
     if (DEBUG_GESTOS) debugGestos.textContent = 'sin manos';
     return;
@@ -155,6 +162,9 @@ function onResults(results) {
         last[slot].y = null;
         suavizado[slot].x = null;
         suavizado[slot].y = null;
+        // La mano se fue de verdad: los frames de pulgar arriba no se acumulan
+        // de un gesto a otro (si no, dos gestitos cortos distintos arrancan).
+        thumbsupFrames[slot] = 0;
       }
     } else {
       framesPerdidos[slot] = 0; // se la volvió a ver, resetea el contador
@@ -231,7 +241,8 @@ return; // este frame la mano se dedicó a la paleta
     // vuelve a cero y queda listo para volver a arrancarlo.
     if (gestoActual === 'thumbsup') {
       thumbsupFrames[slot]++;
-      if (thumbsupFrames[slot] === CONFIG.FRAMES_PULGAR_ARRIBA) {
+      if (thumbsupFrames[slot] >= CONFIG.FRAMES_PULGAR_ARRIBA) {
+        thumbsupFrames[slot] = CONFIG.FRAMES_PULGAR_ARRIBA; // dispara una sola vez
         iniciarCronometro();
       }
     } else {
