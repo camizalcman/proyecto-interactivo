@@ -198,11 +198,15 @@ function onResults(results) {
     // es el momento de celebración, no de limpiar el canvas.
     let gestoActual = gestoLDetectado ? 'pausa' : gesto(landmarks);
 
-    // Durante la cuenta regresiva (3, 2, 1, ¡A dibujar!) no se dibuja ni se
-    // borra: esos gestos se toman como pausa, así tampoco quedan cargando el
-    // anillo del puntero o del borrador para cuando arranque el cronómetro.
-    if (countdownActivo && (gestoActual === 'dibuja' || gestoActual === 'borra')) {
-      gestoActual = 'pausa';
+    // Durante la cuenta regresiva (3, 2, 1, ¡A dibujar!) no se dibuja, no se
+    // borra ni se abre la paleta: esos gestos se toman como pausa, así tampoco
+    // quedan cargando los anillos para cuando arranque el cronómetro. Si la
+    // paleta ya estaba abierta (la cuenta la arrancó otra mano), se cierra.
+    if (countdownActivo) {
+      if (gestoActual === 'dibuja' || gestoActual === 'borra' || gestoActual === 'tresDedos') {
+        gestoActual = 'pausa';
+      }
+      if (paletaVisible) cerrarPaleta();
     }
 
     // Muestra (solo con ?debug) qué dedos se ven extendidos y qué se detectó.
