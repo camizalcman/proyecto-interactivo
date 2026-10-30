@@ -105,6 +105,12 @@ const CONFIG = {
   // "mano" detectada en el fondo por un solo frame) dispare la cuenta regresiva.
   FRAMES_PULGAR_ARRIBA: 6,
 
+  // Qué tan recto tiene que estar el pulgar para el gesto de pulgar arriba:
+  // distancia directa nudillo→punta dividida por el largo de sus dos tramos
+  // (1 = perfectamente recto). Bajarlo hace el gesto más fácil de detectar pero
+  // acepta pulgares más doblados.
+  PULGAR_RECTITUD_MIN: 0.85,
+
   // Frames seguidos con el gesto de "L" (pulgar arriba + índice estirado,
   // resto doblado) para frenar el cronómetro y mostrar "¡Felicitaciones!".
   // Mismo criterio anti-falsos-positivos.

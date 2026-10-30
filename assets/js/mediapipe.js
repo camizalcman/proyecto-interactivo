@@ -65,7 +65,8 @@ function actualizarDebugGestos(landmarks, gestoActual) {
   // dedos, que el pulgar esté estirado y que apunte hacia arriba. Con eso se
   // ve al tiro por qué NO se arrancó el cronómetro.
   const linea = `dedos ${d.map(v => v ? 1 : 0).join('')}  `
-    + `pulgar ${pulgarExtendido(landmarks) ? 1 : 0}  `
+    + `doblados ${dedosClaramenteDoblados(landmarks).map(v => v ? 1 : 0).join('')}  `
+    + `estirado ${pulgarEstirado(landmarks) ? 1 : 0}  `
     + `arriba ${pulgarApuntaArriba(landmarks) ? 1 : 0}  `
     + `->  ${gestoActual}`;
   if (linea === debugUltimaLinea) return; // sólo escribo si cambió algo

@@ -63,59 +63,60 @@ function pulgarExtendido(landmarks) {
   return dist3D(landmarks[4], palma) > dist3D(landmarks[3], palma);
 }
 
-// Un dedo está CLARAMENTE doblado cuando su punta queda bastante más cerca de la
-// muñeca que su PIP. Con el criterio laxo de dedosExtendidos ("más cerca y
-// listo") un dedo a medio extender ya cuenta como doblado, y por eso una mano en
-// reposo o un puño medio cerrado se confundían con el gesto de pulgar arriba.
+// Un dedo está DOBLADO (para el pulgar arriba) cuando su punta queda más cerca
+// de la muñeca que su nudillo del medio (6, 10, 14, 18). En el puño la punta
+// vuelve hacia la palma y siempre queda por detrás de ese nudillo; en una mano
+// relajada o a medio abrir la punta queda por delante → no cuenta.
+// Antes se comparaba contra la articulación de la punta (7, 11...) con un margen
+// del 10%, y en un puño normal el índice muchas veces no llegaba a ese margen.
+const NUDILLOS_MEDIOS = [
+  { punta: 8,  nudillo: 6  },  // índice
+  { punta: 12, nudillo: 10 },  // medio
+  { punta: 16, nudillo: 14 },  // anular
+  { punta: 20, nudillo: 18 },  // meñique
+];
+
 function dedosClaramenteDoblados(landmarks) {
   const palma = landmarks[0];
-  return MAPA_DEDOS.map(({ punta, pip }) => {
-    return dist3D(landmarks[punta], palma) < dist3D(landmarks[pip], palma) * 0.9;
+  return NUDILLOS_MEDIOS.map(({ punta, nudillo }) => {
+    return dist3D(landmarks[punta], palma) < dist3D(landmarks[nudillo], palma);
   });
 }
 
-// El pulgar está BIEN ESTIRADO (no doblado sobre la palma) cuando:
-//  a) la punta queda claramente más lejos de la muñeca que la IP, y
-//  b) el tramo punta→IP es largo: si el pulgar está doblado, ese tramo se
-//     encoge y queda mucho más corto que el tramo nudillo→IP.
+// El pulgar está BIEN ESTIRADO (no doblado sobre la palma) cuando sus dos
+// últimos tramos (2→3 y 3→4) quedan casi en línea recta: la distancia directa
+// 2→4 es casi igual a la suma de los tramos. Si el pulgar se dobla en la
+// articulación, la distancia directa se acorta.
+// Antes se comparaba el tramo punta→IP contra IP→base (1), pero ese tramo de la
+// base son DOS huesos: aun con el pulgar bien estirado la cuenta casi nunca daba,
+// y por eso el gesto no se detectaba.
 function pulgarEstirado(landmarks) {
-  const palma = landmarks[0];
-  const cMC   = landmarks[1];
-  const IP    = landmarks[3];
+  const mcp   = landmarks[2];
+  const ip    = landmarks[3];
   const punta = landmarks[4];
-
-  if (dist3D(punta, palma) <= dist3D(IP, palma) * 1.15) return false;
-  if (dist3D(punta, IP) < dist3D(IP, cMC) * 0.7) return false;
-  return true;
+  const largoTramos = dist3D(mcp, ip) + dist3D(ip, punta);
+  return dist3D(mcp, punta) > largoTramos * CONFIG.PULGAR_RECTITUD_MIN;
 }
 
-// El pulgar tiene que apuntar HACIA ARRIBA en la pantalla. Esta es la condición
-// que se estaba FALTANDO y la causa de los falsos positivos: las distancias no
-// dicen hacia dónde apunta el pulgar, así que el puño cerrado (con el pulgar
-// cruzado sobre los dedos), el pulgar hacia un lado o hacia abajo, o una mano
-// cualquiera relajada, también pasaban el chequeo de "pulgar extendido".
+// El pulgar tiene que apuntar HACIA ARRIBA en la pantalla:
+//  1) la dirección del pulgar (2→4) es más vertical que horizontal, y hacia arriba
+//     (en la imagen la y crece hacia abajo);
+//  2) la punta queda por encima del nudillo del medio del índice (6), que es la
+//     parte de arriba del puño. Con el pulgar cruzado sobre el puño cerrado, o
+//     apuntando al costado, la punta no llega hasta ahí.
+// Ya no se usa la muñeca como referencia: en el pulgar arriba el puño suele
+// estar de costado y la muñeca casi a la misma altura que los nudillos, así que
+// los márgenes calculados con ella fallaban aunque el gesto estuviera bien.
 function pulgarApuntaArriba(landmarks) {
-  const muñeca    = landmarks[0];
-  const mcIndice = landmarks[5]; // nudillo del índice
-  const ipIndice = landmarks[7]; // articulación del índice
+  const mcp      = landmarks[2];
   const punta    = landmarks[4];
+  const nudIndice = landmarks[6];
 
-  // Alto de la mano (en la imagen) para normalizar: los márgenes valen igual si
-  // la mano está cerca o lejos de la cámara.
-  const altoMano = Math.abs(muñeca.y - mcIndice.y) || 1e-6;
+  const subida = mcp.y - punta.y;            // positivo = la punta está más arriba
+  const lateral = Math.abs(punta.x - mcp.x);
+  if (subida <= lateral) return false;
 
-  // 1) La punta del pulgar tiene que quedar claramente POR ENCIMA de la muñeca.
-  //    Si el pulgar apunta al costado o hacia abajo, la punta queda a la altura
-  //    del nudillo del índice o más abajo → no cuenta.
-  if (muñeca.y - punta.y < altoMano * 0.4) return false;
-
-  // 2) Y claramente por encima de la articulación del índice. En un pulgar arriba
-  //    de verdad la punta llega a la altura del nudillo del índice o más arriba;
-  //    en el puño cerrado la punta queda a la altura de las articulaciones, más
-  //    abajo. Acá se cae el puño cerrado.
-  if (ipIndice.y - punta.y < altoMano * 0.5) return false;
-
-  return true;
+  return punta.y < nudIndice.y;
 }
 
 // Determina el gesto de la mano según los dedos extendidos:
@@ -153,7 +154,7 @@ function gesto(landmarks) {
 }
 
 // Detecta el gesto de "pulgar arriba". Exige las CUATRO condiciones a la vez:
-//   1) los otros 4 dedos CLARAMENTE doblados (puño cerrado, no a medio extender),
+//   1) los otros 4 dedos doblados (puño cerrado, no a medio extender),
 //   2) el pulgar bien ESTIRADO (no apoyado ni doblado sobre la palma),
 //   3) el pulgar apuntando HACIA ARRIBA en la pantalla,
 //   4) la punta del pulgar DESPEGADA del índice.
@@ -164,7 +165,7 @@ function pulgarArriba(landmarks) {
   if (!landmarks || landmarks.length < 21) return false;
   if (!landmarks.every(p => Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z))) return false;
 
-  // 1) Los 4 dedos bien doblados.
+  // 1) Los 4 dedos doblados.
   if (!dedosClaramenteDoblados(landmarks).every(Boolean)) return false;
 
   // 2) El pulgar estirado.
