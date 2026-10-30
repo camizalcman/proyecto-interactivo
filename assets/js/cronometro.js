@@ -182,7 +182,6 @@ function mostrarCountdown(callback) {
   let i = 0;
 
   function mostrarPaso() {
-    if (!countdownActivo) return; // la celebración frenó el countdown: no continuar
     if (i >= pasos.length) {
       overlay.style.opacity = '0';
       setTimeout(() => {
@@ -267,14 +266,15 @@ function iniciarCronometro() {
   });
 }
 
-// Frena el cronómetro (sea la cuenta regresiva o el countdown previo), borra
-// todo el dibujo y muestra "¡Felicitaciones!". Se llama desde mediapipe.js
-// cuando se detectan las DOS manos abiertas y completas.
+// Frena el cronómetro, borra todo el dibujo y muestra "¡Felicitaciones!".
+// Se llama desde mediapipe.js cuando se detecta el gesto de "L".
+// Durante el countdown previo (3, 2, 1, ¡A dibujar!) no hace nada: el
+// countdown no se puede interrumpir ni superponer con la celebración, sigue
+// hasta el final y arranca el cronómetro.
 function frenarCronometro() {
-  if (!corriendo && !countdownActivo) return;
+  if (countdownActivo || !corriendo) return;
 
   corriendo = false;
-  countdownActivo = false;
   clearInterval(intervaloId);
   intervaloId = null;
 

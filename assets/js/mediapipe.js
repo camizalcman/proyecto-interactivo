@@ -196,7 +196,14 @@ function onResults(results) {
 
     // Si hay un gesto de "L" (finalizar), ningún dedo acciona dibujar/borrar:
     // es el momento de celebración, no de limpiar el canvas.
-    const gestoActual = gestoLDetectado ? 'pausa' : gesto(landmarks);
+    let gestoActual = gestoLDetectado ? 'pausa' : gesto(landmarks);
+
+    // Durante la cuenta regresiva (3, 2, 1, ¡A dibujar!) no se dibuja ni se
+    // borra: esos gestos se toman como pausa, así tampoco quedan cargando el
+    // anillo del puntero o del borrador para cuando arranque el cronómetro.
+    if (countdownActivo && (gestoActual === 'dibuja' || gestoActual === 'borra')) {
+      gestoActual = 'pausa';
+    }
 
     // Muestra (solo con ?debug) qué dedos se ven extendidos y qué se detectó.
     actualizarDebugGestos(landmarks, gestoActual);
