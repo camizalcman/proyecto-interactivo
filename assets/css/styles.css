@@ -275,3 +275,11 @@ body {
 #cerrarReglas:hover {
   background: rgba(0, 0, 0, 0.85);
 }
+
+/* Los botones Limpiar, Reglas y Gestos quedan ocultos: la guía de gestos
+   ya está en el panel lateral. Para volver a mostrarlos, borrá esta regla. */
+#limpiar,
+#reglas,
+#gestos {
+  display: none;
+}
