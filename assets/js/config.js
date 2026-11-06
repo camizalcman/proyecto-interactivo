@@ -129,6 +129,23 @@ const CONFIG = {
   // así que el ✓ solo confirma el cambio y estorba si dura mucho.
   FEEDBACK_COLOR_MS: 700,
 
+  // ── Ticket impreso ───────────────────────────────────────────
+  // Ancho de impresión en puntos: 384 para papel de 58 mm, 576 para papel de 80 mm.
+  // 384 es seguro en ambos (en 80 mm sale centrado, con márgenes); un valor mayor
+  // que el del papel imprime basura.
+  TICKET_ANCHO_PUNTOS: 384,
+  TICKET_TITULO: 'Proyecto interactivo', // texto debajo de la foto
+  TICKET_GAMMA: 0.8, // menos de 1 aclara la foto, más de 1 la oscurece
+
+  // Palabras del botón "Nueva palabra". Salen al azar y sin repetirse hasta que
+  // hayan salido todas; ahí se vuelve a empezar con la lista completa.
+  PALABRAS: [
+    'Perro', 'Lámpara', 'Mochila', 'Cámara', 'Auriculares', 'León', 'Tiburón',
+    'Playa', 'Cactus', 'Pizza', 'Auto', 'Avión', 'Bicicleta', 'Paraguas',
+    'Guitarra', 'Castillo', 'Volcán', 'Robot', 'Astronauta', 'Hamburguesa',
+    'Pochoclos', 'Fogón', 'Conejo', 'Anteojos', 'Fantasma',
+  ],
+
   // ── Audios ───────────────────────────────────────────────────
   // Carpeta donde viven los audios. Para agregar un sonido nuevo:
   // 1) ponelo en la carpeta 2) agregalo acá 3) llamá reproducirAudio('evento').

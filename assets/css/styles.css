@@ -177,6 +177,72 @@ body {
   background: rgba(255, 255, 255, 0.25);
 }
 
+/* ── BOTONES DE IMPRIMIR TICKET ────────────────────────────────── */
+#botonesTicket {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+}
+
+#botonesTicket button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1a3f94;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3); /* lo separa de la imagen de la cámara */
+  padding: 10px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+#botonesTicket svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#botonesTicket #imprimir {
+  background: #0b1a3a; /* el mismo azul del panel lateral */
+}
+
+#botonesTicket button:hover {
+  filter: brightness(1.2);
+}
+
+#botonesTicket button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#avisoTicket {
+  display: none;
+  position: absolute;
+  bottom: 132px;
+  right: 20px;
+  max-width: 60%;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 15px;
+  pointer-events: none;
+  z-index: 10;
+}
+
 /* ── OVERLAY DE GESTOS ─────────────────────────────────────────── */
 #overlayGestos {
   position: fixed;

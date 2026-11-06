@@ -4,9 +4,19 @@ Aplicación web de **dibujo por gestos de la mano**: usás la cámara como entra
 
 ## Cómo se usa
 
-1. Abrí `index.html` con un servidor local (requiere internet para los CDN y la cámara).
+1. Ejecutá `node servidor/servidor.js` y abrí http://localhost:3000 (requiere internet para los CDN y la cámara).
 2. Parate frente a la cámara y mostrá la mano.
 3. Usá los gestos de la tabla para dibujar, borrar, arrancar el cronómetro y celebrar.
+4. Tocá **Imprimir** para sacar una foto (cámara + dibujo) e imprimirla como ticket, o **Nueva palabra** para imprimir una palabra al azar.
+
+## Impresión del ticket
+
+Funciona en Windows con una impresora térmica USB compatible con ESC/POS (XPrinter) y solo necesita Node.js: no hay que instalar drivers ni crear una cola de impresión. El navegador arma el ticket (`assets/js/ticket.js`) y el servidor local se lo pasa a la impresora (`servidor/`).
+
+- **Papel:** `TICKET_ANCHO_PUNTOS` en `config.js`: `384` para 58 mm, `576` para 80 mm.
+- **Palabras:** la lista está en `PALABRAS` en `config.js`. Salen al azar sin repetirse hasta que salieron todas; al recargar la página la lista vuelve a empezar.
+- **Otra impresora:** cambiá `IMPRESORA_USB` en `servidor/servidor.js` por su VID y PID (Administrador de dispositivos → Detalles → Id. de hardware).
+- Con otro servidor (Live Server, `python -m http.server`) la página funciona, pero el botón **Imprimir** no.
 
 ## Gestos
 
@@ -67,7 +77,11 @@ proyecto-interactivo/
 │       ├── cronometro.js       # Cronómetro, countdown, overlays, audios
 │       ├── audio.js            # Carga y reproduce los sonidos
 │       ├── reglas.js           # Botón y video de reglas
+│       ├── ticket.js           # Botones Imprimir y Nueva palabra: arma el ticket en ESC/POS
 │       └── mediapipe.js        # Inicializa MediaPipe, cámara y orquesta todo
+├── servidor/
+│   ├── servidor.js             # Sirve la página y recibe los tickets
+│   └── enviar-a-impresora.ps1  # Escribe el ticket en la impresora USB
 └── README.md
 ```
 
@@ -101,5 +115,5 @@ Los primeros 4 números son índice, medio, anular y meñique (`1` = extendido).
 
 - *Requiere internet* la primera vez que cargan los CDN de MediaPipe y Google Fonts (luego el navegador los cachea).
 - Cámara/webcam habilitada y permisos concedidos al navegador.
-- Para servir el proyecto usá un servidor local (ej.: `python -m http.server` o la extensión Live Server de VS Code).
+- Para servir el proyecto usá `node servidor/servidor.js`.
 - Los archivos de audio y video no están incluidos como código: están en `assets/audio/` y `assets/video/`.

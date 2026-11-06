@@ -28,6 +28,24 @@
             <button id="limpiar">Limpiar</button> <!--BOTON LIMPIAR-->
             <button id="reglas">Reglas</button> <!--BOTON REGLAS-->
             <button id="gestos">Gestos</button> <!--BOTON GESTOS-->
+            <div id="botonesTicket">
+                <button id="nuevaPalabra"> <!--BOTON IMPRIMIR UNA PALABRA-->
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 5v14"/>
+                        <path d="M5 12h14"/>
+                    </svg>
+                    Nueva palabra
+                </button>
+                <button id="imprimir"> <!--BOTON IMPRIMIR TICKET-->
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                        <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/>
+                        <rect x="6" y="14" width="12" height="8" rx="1"/>
+                    </svg>
+                    Imprimir
+                </button>
+            </div>
+            <div id="avisoTicket" role="status"></div> <!--ESTADO DE LA IMPRESION-->
 
         </div>
 
@@ -71,6 +89,7 @@
         <script src="assets/js/audio.js"></script>
         <script src="assets/js/reglas.js"></script>
         <script src="assets/js/mostrar-gestos.js"></script>
+        <script src="assets/js/ticket.js"></script>
         <script src="assets/js/mediapipe.js"></script>
 
     </body>
